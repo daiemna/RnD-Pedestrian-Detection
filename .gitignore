@@ -29,3 +29,6 @@
 
 #Folders 
 build/
+
+#eclipse
+.project
