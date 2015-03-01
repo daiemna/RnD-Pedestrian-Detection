@@ -1,7 +1,7 @@
 # RnD-Pedestrian-Detection
 
 ## Cascadded Classifier
- This is an open implimentation of Cascaded Classifier using [1]
+ This is an open implimentation of Cascaded Classifier using [1]. Using strategy pattren to implement the algorithm.
 ### Functions:
 1. BoostedCascade(CvStatModel classifier);
 2. ~BoostedCascade();
