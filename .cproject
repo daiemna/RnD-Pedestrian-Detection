@@ -68,6 +68,14 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="cdt.managedbuild.toolchain.gnu.cross.base.113948583.71424798" name="CascadedClassifier.cpp" rcbsApplicability="disable" resourcePath="src/CascadedClassifier.cpp" toolsToInvoke="cdt.managedbuild.tool.gnu.cross.cpp.compiler.1523281239.1892891865">
+						<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.1523281239.1892891865" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler.1523281239">
+							<option id="gnu.cpp.compiler.option.include.paths.1828983142" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+								<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/include&quot;"/>
+							</option>
+							<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1158890747" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+						</tool>
+					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -76,9 +84,6 @@
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="RnD-Pedestrian-Detection.null.934564877" name="RnD-Pedestrian-Detection"/>
 	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Default">
@@ -86,4 +91,13 @@
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.cross.base.113948583;cdt.managedbuild.toolchain.gnu.cross.base.113948583.658130127;cdt.managedbuild.tool.gnu.cross.c.compiler.161233950;cdt.managedbuild.tool.gnu.c.compiler.input.1135759167">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.cross.base.113948583;cdt.managedbuild.toolchain.gnu.cross.base.113948583.658130127;cdt.managedbuild.tool.gnu.cross.cpp.compiler.1523281239;cdt.managedbuild.tool.gnu.cpp.compiler.input.70471140">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+	</storageModule>
 </cproject>
