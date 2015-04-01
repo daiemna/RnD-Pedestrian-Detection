@@ -29,11 +29,11 @@ public:
 	void write(CvFileStorage* storage, const char* name);
 	void read(CvFileStorage* storage, CvFileNode* node);
 	bool train(const Mat& train_data, const Mat& responses, const Mat& var_idx =
-			0, const Mat& sample_idx = 0);
+			Mat(), const Mat& sample_idx = Mat());
 	float predict(const Mat& sample) const;
 private:
 //		unsigned int cascadeCount;
-	vector<simple_classifier> cascade_list;
+	vector<simple_classifier> * cascade_list;
 	Mat featureIndices;
 	Mat sampleIndices;
 
