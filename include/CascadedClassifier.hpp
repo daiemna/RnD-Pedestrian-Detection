@@ -5,6 +5,8 @@
 
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include "debug.hpp"
+
 
 using namespace cv;
 using namespace std;
