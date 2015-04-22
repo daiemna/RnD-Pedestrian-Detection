@@ -4,14 +4,14 @@
  This is an open implimentation of Cascaded Classifier using [1].
 ### Functions:
 1. BoostedCascade(CvStatModel classifier) **Done**;
-2. ~BoostedCascade()**Done**;
-void clear();
-3. void save( const char* filename, const char* name=0 );
-4. void load( const char* filename, const char* name=0 );
-5. void write( CvFileStorage* storage, const char* name );
-6. void read( CvFileStorage* storage, CvFileNode* node );
-7. bool train(const Mat& train_data, const Mat& responses, int tflag = CV_COL_SAMPLE, const Mat& var_idx =0, const Mat& sample_idx = 0)**Done**;
-8. float predict(const Mat& sample) const;
+2. ~BoostedCascade() **Done**;
+3. void clear();
+4. void save( const char* filename, const char* name=0 );
+5. void load( const char* filename, const char* name=0 );
+6. void write( CvFileStorage* storage, const char* name );
+7. void read( CvFileStorage* storage, CvFileNode* node );
+8. bool train(const Mat& train_data, const Mat& responses, int tflag = CV_COL_SAMPLE, const Mat& var_idx =0, const Mat& sample_idx = 0) **Done**;
+9. float predict(const Mat& sample) const;
 
 
 #References
