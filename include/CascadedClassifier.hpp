@@ -32,7 +32,7 @@ public:
 	void read(CvFileStorage* storage, CvFileNode* node);
 	bool train(const Mat& train_data, const Mat& responses, const Mat& var_idx =
 			Mat(), const Mat& sample_idx = Mat());
-	float predict(const Mat& sample) const;
+	float predict(const Mat& samples,Mat& predictions) const;
 private:
 //		unsigned int cascadeCount;
 	vector<simple_classifier> * cascade_list;

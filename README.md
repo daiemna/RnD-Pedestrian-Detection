@@ -11,7 +11,7 @@
 6. void write( CvFileStorage* storage, const char* name );
 7. void read( CvFileStorage* storage, CvFileNode* node );
 8. bool train(const Mat& train_data, const Mat& responses, int tflag = CV_COL_SAMPLE, const Mat& var_idx =0, const Mat& sample_idx = 0) **Done**;
-9. float predict(const Mat& sample) const;
+9. float predict(const Mat& sample) const **Done**;
 
 
 #References

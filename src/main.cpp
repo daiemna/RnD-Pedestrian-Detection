@@ -32,6 +32,9 @@ int cascadeTest(int argc, char* argv[]){
 	res.row(2) = Scalar(1);
 //	DEBUG_STREAM << "Responses : " << res << endl;
 	cascade_classifier.train(train_data,res);
+	Mat predictions;
+	cascade_classifier.predict(train_data,predictions);
+	DEBUG_STREAM << "predictions : " << predictions << endl;
 	return 0;
 }
 

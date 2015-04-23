@@ -80,8 +80,9 @@ bool CascadedClassifier::train(const Mat& train_data, const Mat& responses,
 		weak_responses = (weak_responses < 0.5)/255;
 		weak_responses.convertTo(weak_responses,CV_32F);
 		Mat sumW(1, 1, CV_64F);
-		reduce(pre_weight_vector, sumW, 0, CV_REDUCE_SUM);
-		double sum_weights = sumW.at<float>(0);
+//		reduce(pre_weight_vector, sumW, 0, CV_REDUCE_SUM);
+//		double sum_weights = sumW.at<float>(0);
+		double sum_weights = sum(pre_weight_vector).val[0];
 		DEBUG_STREAM << "sum_weights :" << sum_weights << endl;
 
 		//updating current weight vector.
@@ -158,8 +159,10 @@ bool CascadedClassifier::train(const Mat& train_data, const Mat& responses,
 
 		// cur_weight_vector =
 		// normalize weights
-		reduce(cur_weight_vector, sumW, 0, CV_REDUCE_SUM);
-		sum_weights = sumW.at<float>(0);
+
+//		reduce(cur_weight_vector, sumW, 0, CV_REDUCE_SUM);
+//		sum_weights = sumW.at<float>(0);
+		sum_weights = sum(cur_weight_vector).val[0];
 		DEBUG_STREAM << "sum_weights : " << sum_weights << endl;
 		cur_weight_vector = cur_weight_vector.mul(Scalar(1.0 / sum_weights));
 		DEBUG_STREAM << "cur_weight_vector after norm : " << cur_weight_vector << endl;
@@ -167,6 +170,25 @@ bool CascadedClassifier::train(const Mat& train_data, const Mat& responses,
 	}
 	return true;
 }
-float CascadedClassifier::predict(const Mat& sample) const {
-	return -1.0;
+float CascadedClassifier::predict(const Mat& samples,Mat& predictions) const {
+//	for (int j = 0; j < samples.rows; j++){
+	Mat examples = samples.clone();
+	Mat cur_predections, pre_predections,indexes;
+	for (int i = 0; i < cascade_list->size(); i++) {
+		DEBUG_LOG("------------------Cascade number %d----------------\n",i);
+		cascade_list->at(i).predict(examples,cur_predections);
+		cur_predections = (cur_predections < 0.5)/255;
+		cur_predections.convertTo(cur_predections,CV_32F);
+		DEBUG_STREAM << " cur_predections : "<< cur_predections << endl;
+		if(i == 0){
+			pre_predections = cur_predections.clone();
+//			indexes =
+		}else{
+			pre_predections = pre_predections.mul(cur_predections);
+//			inRange(cur_predections,Scalar(255),Scalar(255),indexes);
+		}
+		DEBUG_STREAM << " pre_predections : "<< pre_predections << endl;
+	}
+	predictions = pre_predections.clone();
+	return 0.0;
 }
