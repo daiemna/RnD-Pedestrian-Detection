@@ -6,12 +6,14 @@
 #ifndef DEBUG_HPP
 #define DEBUG_HPP
 
+#ifndef DEBUGING
+//#define DEBUGING
+#endif
+
 #include <stdio.h>
 #include <iostream>
 
-using namespace std;
-
-#define DEBUG_STREAM cout
+#define DEBUG_STREAM std::cout
 #define DEBUG_LOG printf
 #define ERROR_LOG printf
 

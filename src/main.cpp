@@ -28,9 +28,10 @@ int cascadeTest(int argc, char* argv[]){
 	rng.fill(train_data,RNG::NORMAL,rng.uniform(1,10),rng.uniform(1,10));
 	Mat res = Mat::zeros(Size(1,samples),CV_32FC1);
 	res.row(0) = Scalar(1);
-	res.row(3) = Scalar(1);
+//	res.row(1) = Scalar(1);
 	res.row(2) = Scalar(1);
-//	DEBUG_STREAM << "Responses : " << res << endl;
+//	res.row(3) = Scalar(1);
+	res.row(4) = Scalar(1);
 	cascade_classifier.train(train_data,res);
 	Mat predictions;
 	cascade_classifier.predict(train_data,predictions);
