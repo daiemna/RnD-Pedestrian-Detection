@@ -25,7 +25,8 @@ int cascadeTest(int argc, char* argv[]){
 	uint features = 10;
 	Mat train_data = Mat(samples,features,CV_32FC1);
 	RNG rng = RNG();
-	rng.fill(train_data,RNG::NORMAL,rng.uniform(1,10),rng.uniform(1,10));
+	rng.fill(train_data,RNG::NORMAL,rng.uniform(1,5),rng.uniform(1,5));
+	DEBUG_STREAM << "train_data : " << train_data << endl;
 	Mat res = Mat::zeros(Size(1,samples),CV_32FC1);
 	res.row(0) = Scalar(1);
 //	res.row(1) = Scalar(1);
