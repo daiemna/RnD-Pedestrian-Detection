@@ -32,4 +32,6 @@ build/
 
 #eclipse
 .project
-/Default/
+Default/
+.settings/
+.cproject
