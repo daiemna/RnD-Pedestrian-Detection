@@ -6,6 +6,8 @@ list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 file(GLOB_RECURSE HEADERS "include/*.h")
+file(GLOB_RECURSE IMAGE_LIB_SOURCES "src/image_lib/*.cpp")
+# file(GLOB_RECURSE IMAGE_LIB_HEADERS "include/image_lib/")
 
 set (INCLUDE_DIR "")
 foreach (_headerFile ${HEADERS})
@@ -21,6 +23,8 @@ FIND_PACKAGE(JPEG REQUIRED)
 INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
 
 INCLUDE_DIRECTORIES(${INCLUDE_DIR})
-add_library(_${PROJECT_NAME} SHARED ${SOURCES})
-add_executable(Main ${SOURCES})
+# INCLUDE_DIRECTORIES(${IMAGE_LIB_HEADERS})
+
+add_library(_${PROJECT_NAME} SHARED ${SOURCES} ${IMAGE_LIB_SOURCES})
+add_executable(Main ${SOURCES} ${IMAGE_LIB_SOURCES})
 target_link_libraries(Main _${PROJECT_NAME} ${PNG_LIBRARY} ${JPEG_LIBRARY})
