@@ -2,39 +2,55 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
 project(haar_features)
 
-list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -g -ftest-coverage -fprofile-arcs")
+# SET(CMAKE_CXX_FLAGS 
+# 	"-pthread"
+# )
+
+list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} -pthread -g -ftest-coverage -fprofile-arcs")
 
 file(GLOB_RECURSE SOURCES "src/*.cpp")
-file(GLOB_RECURSE HEADERS "include/*.h")
+# file(GLOB_RECURSE HEADERS "include/*.h")
 
 SET(FH_IMAGE 
-	"../imagelib_lite"
+	"/home/dna/eclipse_workspace/RnD-Pedestrian-Detection/imagelib_lite/"
 )
 
 SET(FH_IMAGE_LIBRARY 
-	../${FH_IMAGE}/build/lib_fh_image_lite.so
+	${FH_IMAGE}/build/lib_fh_image_lite.so
 )
 
 SET(FH_IMAGE_INCLUDE 
-	${FH_IMAGE}/include
+	${FH_IMAGE}/include/image_lib
+)
+SET (INCLUDE_DIR 
+	"include/*.h"
 )
 
-set (INCLUDE_DIR "")
-foreach (_headerFile ${HEADERS})
-    get_filename_component(_dir ${_headerFile} PATH)
-    list (APPEND INCLUDE_DIR ${_dir})
-endforeach()
-list(REMOVE_DUPLICATES INCLUDE_DIR)
-
 if(NOT EXISTS ${FH_IMAGE_LIBRARY})
-	MESSAGE(FATAL_ERROR "CANNOT FIND fraunhofer image lib at path "${FH_IMAGE_LIBRARY})
+	MESSAGE(FATAL_ERROR "CANNOT FIND fraunhofer image lib at path " ${FH_IMAGE_LIBRARY})
+else()
+	MESSAGE(STATUS "FOUND fraunhofer image lib at path " ${FH_IMAGE_LIBRARY})
 endif()
 
-# MESSAGE(STATUS "\nInclude dir: "${FH_IMAGE}/include)
+if(NOT EXISTS ${FH_IMAGE_INCLUDE}/image.h)
+	MESSAGE(FATAL_ERROR "CANNOT FIND fraunhofer image headers at path " ${FH_IMAGE_INCLUDE})
+else()
+	MESSAGE(STATUS "FOUND fraunhofer image headers at path " ${FH_IMAGE_INCLUDE})
+endif()
 
+# MESSAGE(STATUS "\nInclude dir: "${FH_IMAGE}"/include")
+
+INCLUDE_DIRECTORIES("include/")
 INCLUDE_DIRECTORIES(${INCLUDE_DIR})
-INCLUDE_DIRECTORIES(${FH_IMAGE}/include)
+INCLUDE_DIRECTORIES(${FH_IMAGE_INCLUDE})
+
+
+FIND_PACKAGE(PNG REQUIRED)
+INCLUDE_DIRECTORIES(${PNG_INCLUDE_DIR})
+
+FIND_PACKAGE(JPEG REQUIRED)
+INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
 
 add_library(_${PROJECT_NAME} SHARED ${SOURCES})
-add_executable(Main ${SOURCES})
-target_link_libraries(Main _${PROJECT_NAME} ${FH_IMAGE_LIBRARY})
+add_executable(Main ${SOURCES} ${FH_IMAGE_SOURCES})
+target_link_libraries(Main _${PROJECT_NAME} ${FH_IMAGE_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY})

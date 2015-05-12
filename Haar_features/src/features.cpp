@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 
-#include "features.h"
+#include "abstract_features/features.h"
 
 using namespace std;
 using namespace image;

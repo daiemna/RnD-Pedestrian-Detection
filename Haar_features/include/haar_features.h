@@ -12,8 +12,8 @@
 #include <string>
 
 #include "image.h"
-#include "features.h"
-#include "cv_utils.h"
+#include "abstract_features/features.h"
+#include "abstract_features/cv_utils.h"
 
 #define MAX_RECTS 3
 
