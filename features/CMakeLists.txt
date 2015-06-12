@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project(haar_features)
+project(features)
 
 # SET(CMAKE_CXX_FLAGS 
 # 	"-pthread"
@@ -51,6 +51,20 @@ INCLUDE_DIRECTORIES(${PNG_INCLUDE_DIR})
 FIND_PACKAGE(JPEG REQUIRED)
 INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
 
+set(OPENCV_PATH $ENV{OPENCV_DIR})
+if(NOT OPENCV_PATH)
+	message(FATAL_ERROR "OPENCV_DIR envoirnment variable does not exsist")
+	exit()
+endif()
+
+set(OPENCV_INCLUDE_DIR "${OPENCV_PATH}../")
+set(OPENCV_LIBRARY_DIR "${OPENCV_PATH}../../lib/")
+set(OPENCV_LIBRARY  "-lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab")
+
+include_directories(${OPENCV_INCLUDE_DIR})
+link_directories(${OPENCV_LIBRARY_DIRS})
+
+
 add_library(_${PROJECT_NAME} SHARED ${SOURCES})
 add_executable(Main ${SOURCES} ${FH_IMAGE_SOURCES})
-target_link_libraries(Main _${PROJECT_NAME} ${FH_IMAGE_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY})
+target_link_libraries(Main _${PROJECT_NAME} ${FH_IMAGE_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY} ${OPENCV_LIBRARY})
