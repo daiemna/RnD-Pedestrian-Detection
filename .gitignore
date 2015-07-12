@@ -29,9 +29,11 @@
 
 #Folders 
 build/
+features/img/
 
 #eclipse
 .project
+.pydevproject
 Default/
 .settings/
 .cproject

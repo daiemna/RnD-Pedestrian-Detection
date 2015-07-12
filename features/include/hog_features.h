@@ -10,12 +10,13 @@
 #define HOGFEATURES_H_
 
 #include <string>
+#include <algorithm>
 #include <stdint.h>
 #include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace cv;
-#define uint_t uint16_t
+#define uint_t int
 
 #ifndef NDEBUG
 #define NDEBUG true
@@ -29,8 +30,8 @@ class HOGParams{
 public:
 
 	HOGParams();
-	HOGParams(uint_t block_count, uint_t bin_count);
-	HOGParams(uint_t block_count_x,uint_t block_count_y, uint_t bin_count);
+	HOGParams(Size, uint_t);
+	HOGParams(uint_t,uint_t, uint_t);
 	virtual ~HOGParams();
 
 	ostream& operator<<(ostream& os)const;
@@ -39,9 +40,14 @@ public:
 // 	Size getBlockSize(uint_t,uint_t);
 // 	uint_t getBinCount();
 // private:
-	uint_t block_count_x_;
-	uint_t block_count_y_;
+	Size pixel_per_cell_;
+	Size cell_per_block_;
+	Size block_stride_;
+	uint_t cell_count_x_;
+	uint_t cell_count_y_;
 	uint_t bin_count_;
+	float round_off_;
+	bool image_norm_;
 };
 
 class HOGEvaluator : public cv::FeatureEvaluator{
@@ -67,6 +73,10 @@ protected:
 	Mat current_image_;
 	Ptr<Size> win_size_;
 	Ptr<Point> win_pos_;
+//	Ptr<cv::Formatter> formatter_;
+
+private:
+	bool replaceImage(Mat img);
 };
 }// end namespace feat
 // ------------------------------------------------------------

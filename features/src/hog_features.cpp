@@ -8,10 +8,10 @@
 
 #include <iostream>
 #include <tgmath.h>
-
+#include <fstream>
 #include "hog_features.h"
 
-//#define NDEBUG true
+//#define NDEBUG false
 
 using namespace std;
 using namespace feat;
@@ -20,22 +20,34 @@ using namespace feat;
 // ------------------------ HOGParams ------------------------
 // ------------------------------------------------------------
 
-HOGParams::HOGParams() {
-	block_count_x_ = 3;
-	block_count_y_ = 3;
+HOGParams::HOGParams() :
+	pixel_per_cell_(6,6),
+	cell_per_block_(1,1),
+	block_stride_(1,1),
+	image_norm_(true){
+	cell_count_x_ = 0;
+	cell_count_y_ = 0;
 	bin_count_ = 9;
+	round_off_ = 1.0e-5;
 }
 
-HOGParams::HOGParams(uint_t block_count, uint_t bin_count) {
-	block_count_x_ = block_count_y_ = block_count;
+HOGParams::HOGParams(Size cell_size, uint_t bin_count):
+pixel_per_cell_(cell_size.width,cell_size.height),
+cell_per_block_(1,1)
+{
+	cell_count_x_ = cell_count_y_ = 0;
 	bin_count_ = bin_count;
+	round_off_ = 0.01;
+	image_norm_ = true;
 }
 
 HOGParams::HOGParams(uint_t block_count_x, uint_t block_count_y,
 uint_t bin_count) {
-	block_count_x_ = block_count_x;
-	block_count_y_ = block_count_y;
+	cell_count_x_ = block_count_x;
+	cell_count_y_ = block_count_y;
 	bin_count_ = bin_count;
+	round_off_ = 0.01;
+	image_norm_ = true;
 }
 
 HOGParams::~HOGParams() {
@@ -51,8 +63,8 @@ ostream& HOGParams::operator<<(ostream& os) const {
 
 void HOGParams::printToStream(ostream& stream) {
 	stream << "Bin Count : " << this->bin_count_ << endl
-			<< "Blocks along x-axis : " << this->block_count_x_ << endl
-			<< "Blocks along y-axis : " << this->block_count_y_ << endl;
+			<< "Blocks along x-axis : " << this->cell_count_x_ << endl
+			<< "Blocks along y-axis : " << this->cell_count_y_ << endl;
 }
 
 // ------------------------------------------------------------
@@ -61,21 +73,21 @@ void HOGParams::printToStream(ostream& stream) {
 
 bool HOGEvaluator::setImage(Mat img, Size origWinSize) {
 
-	cout << "inside set image!" << endl;
-	printf("Image size:(%d,%d)\n", img.cols, img.rows);
-	printf("origWinSize :(%d,%d)\n", origWinSize.width, origWinSize.height);
-	cout << "HOG params :" << endl;
-	params_->printToStream(cout);
+//	cout << "inside set image!" << endl;
+//	printf("Image size:(%d,%d)\n", img.cols, img.rows);
+//	printf("origWinSize :(%d,%d)\n", origWinSize.width, origWinSize.height);
+//	cout << "HOG params :" << endl;
+//	params_->printToStream(cout);
 	if (origWinSize.width <= 0 && origWinSize.height <= 0) {
 		origWinSize.width = img.cols;
 		origWinSize.height = img.rows;
 	}
-	if (img.rows <= params_->block_count_y_ * MIN_BLOCK_SIZE
-			|| img.cols <= params_->block_count_x_ * MIN_BLOCK_SIZE
-			|| origWinSize.height <= params_->block_count_y_ * MIN_BLOCK_SIZE
-			|| origWinSize.width <= params_->block_count_x_ * MIN_BLOCK_SIZE) {
-		return false;
-	}
+//	if (img.rows <= params_->cell_count_y_ * MIN_BLOCK_SIZE
+//			|| img.cols <= params_->cell_count_x_ * MIN_BLOCK_SIZE
+//			|| origWinSize.height <= params_->cell_count_y_ * MIN_BLOCK_SIZE
+//			|| origWinSize.width <= params_->cell_count_x_ * MIN_BLOCK_SIZE) {
+//		return false;
+//	}
 	if (origWinSize.width == 0 && origWinSize.height == 0) {
 		win_size_->width = img.cols;
 		win_size_->height = img.rows;
@@ -83,11 +95,23 @@ bool HOGEvaluator::setImage(Mat img, Size origWinSize) {
 		win_size_->width = origWinSize.width;
 		win_size_->height = origWinSize.height;
 	}
-	if (!current_image_.empty()) {
-		current_image_.deallocate();
+	params_->cell_count_x_ = win_size_->width / params_->pixel_per_cell_.width;
+	params_->cell_count_y_ = win_size_->height / params_->pixel_per_cell_.height;
+	replaceImage(img);
+	if(params_->image_norm_){
+		cv::sqrt(current_image_,current_image_);
 	}
-	current_image_ = img.clone();
 	resetFeatures();
+//	cout << "image set!" << endl;
+	return true;
+}
+
+bool HOGEvaluator::replaceImage(Mat img){
+	if (current_image_.data) {
+			current_image_.release();
+	}
+	img.assignTo(current_image_, CV_32F);
+//	current_image_ = img.clone();
 	return true;
 }
 
@@ -103,9 +127,9 @@ bool HOGEvaluator::setWindow(Point p) {
 			|| p.y + win_size_->height > current_image_.rows) {
 		return false;
 	}
-	if (p.x + win_size_->width < params_->block_count_x_ * MIN_BLOCK_SIZE
+	if (p.x + win_size_->width < params_->cell_count_x_ * params_->pixel_per_cell_.width
 			|| p.y + win_size_->height
-					< params_->block_count_y_ * MIN_BLOCK_SIZE) {
+					< params_->cell_count_y_ * params_->pixel_per_cell_.height) {
 		return false;
 	}
 	resetFeatures();
@@ -118,11 +142,14 @@ bool HOGEvaluator::setWindow(Point p) {
 // -------------------- HOGEvaluator -------------------------
 // ------------------------------------------------------------
 HOGEvaluator::HOGEvaluator() :
-		params_() {
+		params_(){
 	params_ = new HOGParams();
 	win_size_ = new Size(0, 0);
 	win_pos_ = new Point(0, 0);
 //	features_ = Mat::zeros(params_->block_count_x_ * params_->block_count_y_ * params_->bin_count_, 1, CV_32F);
+//	formatter_ = cv::Formatter::get("CSV");
+
+//	formatter_->
 }
 
 HOGEvaluator::~HOGEvaluator() {
@@ -130,8 +157,8 @@ HOGEvaluator::~HOGEvaluator() {
 }
 
 bool HOGEvaluator::resetFeatures() {
-	if (!features_.empty()) {
-		features_.deallocate();
+	if (features_.data) {
+		features_.release();
 		return true;
 	}
 	return false;
@@ -139,44 +166,40 @@ bool HOGEvaluator::resetFeatures() {
 void HOGEvaluator::generate_features() {
 	if (current_image_.empty()) {
 		cout << "Error : No Image Found!" << endl;
+		return;
 	}
-	uint_t nwin_x = params_->block_count_x_;
-	uint_t nwin_y = params_->block_count_y_;
-	uint_t bins = params_->bin_count_;
-	uint_t L = win_size_->height;
-	uint_t C = win_size_->width;
-	Mat H = Mat::zeros(nwin_x * nwin_y * bins, 1, CV_32F);
-	float m = sqrt((float) L / 2);
-	Mat double_im;
-	current_image_.assignTo(double_im, CV_32F);
-	uint_t step_x = floor((float) C / ((float) nwin_x));
-	uint_t step_y = floor((float) L / ((float) nwin_y));
+	Mat H = Mat::zeros(params_->cell_count_x_ * params_->cell_count_y_ * params_->bin_count_, 1, CV_32F);
+//	float m = sqrt((float) win_size_->height / 2);
+//	Mat current_image_;
+//	current_image_.assignTo(current_image_, CV_32F);
+	uint_t step_x = floor((float) win_size_->width / ((float) params_->cell_count_x_));
+	uint_t step_y = floor((float) win_size_->height / ((float) params_->cell_count_y_));
 	uint_t cont = 0;
-	Mat hx = Mat::zeros(1, 3, CV_32F);
+	Mat hx = Mat::zeros(1, 2, CV_32F);
 	hx.at<float>(0) = -1;
-	hx.at<float>(2) = 1;
+	hx.at<float>(1) = 1;
 	Mat hy = (-hx.clone()).t();
 	if (NDEBUG) {
-		cout << "1D filters : " << endl;
-		cout << "hx : " << hx << endl;
-		cout << "hy : " << hy << endl;
-		printf("Image size:(%d,%d)\n", current_image_.cols,
-				current_image_.rows);
-		cout << "step x : " << step_x << endl;
-		cout << "step y : " << step_y << endl;
+//		cout << "1D filters : " << endl;
+//		cout << "hx : " << hx << endl;
+//		cout << "hy : " << hy << endl;
+//		printf("Image size:(%d,%d)\n", current_image_.cols,
+//				current_image_.rows);
+//		cout << "step x : " << step_x << endl;
+//		cout << "step y : " << step_y << endl;
 	}
-	Point anchor = Point(-1, -1);
+	Point anchor = Point(-1,-1);
 	double delta = 0.0;
 	int ddepth = -1;
 	Mat grad_xr;
-	filter2D(double_im, grad_xr, ddepth, hx, anchor, delta, BORDER_DEFAULT);
+	filter2D(current_image_, grad_xr, ddepth, hx, anchor, delta, BORDER_DEFAULT);
 	Mat grad_yu;
-	filter2D(double_im, grad_yu, ddepth, hy, anchor, delta, BORDER_DEFAULT);
+	filter2D(current_image_, grad_yu, ddepth, hy, anchor, delta, BORDER_DEFAULT);
 	Mat angles, magnit;
-	cartToPolar(grad_xr, grad_yu, magnit, angles);
-	imshow("Current Image", current_image_);
-	for (int n = 0; n < nwin_y; n++) {
-		for (int m = 0; m < nwin_x; m++) {
+	cartToPolar(grad_xr, grad_yu, magnit, angles,false);
+//	imshow("Current Image", current_image_);
+	for (int n = 0; n < params_->cell_count_y_; n++) {
+		for (int m = 0; m < params_->cell_count_x_; m++) {
 			cont += 1;
 			Mat angles2, magnit2;
 			angles2 = angles(Range(n * step_y, (n + 1) * step_y),
@@ -187,33 +210,63 @@ void HOGEvaluator::generate_features() {
 			Mat v_magnit = magnit2.clone().reshape(magnit2.channels(), 1);
 			int K = v_angles.cols;
 			int bin = 0;
-			Mat part_H = H(Rect(Point(0, (cont - 1) * bins), Size(1, bins)));
-			for (float ang_lim = -M_PI + 2 * M_PI / bins; ang_lim <= M_PI;
-					ang_lim += 2 * M_PI / bins) {
+			Mat part_H = H(Rect(Point(0, (cont - 1) * params_->bin_count_), Size(1, params_->bin_count_)));
+			for (float ang_lim = -M_PI + 2 * M_PI / params_->bin_count_; ang_lim <= M_PI;
+					ang_lim += 2 * M_PI / params_->bin_count_) {
 				bin = bin + 1;
 				for (int k = 0; k <= K; k++) {
 					if (v_angles.at<float>(k) < ang_lim) {
-						v_angles.at<float>(k) = 100;
+//						v_angles.at<float>(k) = 100;
 						part_H.at<float>(bin) = part_H.at<float>(bin)
 								+ v_magnit.at<float>(k);
 					}
 				}
-				part_H = part_H / (norm(part_H, NORM_L1) + 0.01);
 //				cout << "computed bins in part_H: " << part_H <<endl;
 			}
 		}
 	}
-//	cout << "computed features : " << H << endl;
-	H.assignTo(features_, CV_32F);
+	H = H.reshape(H.channels(),params_->cell_count_y_);
+//	cout << "computed features : " << H.rows << ", " << H.cols << endl;
+	Mat H_norm = Mat::zeros(H.rows,H.cols,H.type());
+	for(int y = 0; y < H.rows; y += params_->block_stride_.height){
+		for(int x = 0; x < H.cols; x += params_->block_stride_.width * params_->bin_count_){
+			int width = params_->bin_count_ * params_->cell_per_block_.width;
+			int height = params_->cell_per_block_.height;
+			if(y+height > H.rows){
+				height = H.rows - y;
+			}
+			if(x+width > H.cols){
+				width = H.cols - x;
+			}
+			Mat part_H = H(Rect(Point(x,y),Size(width, height))).clone();
+//			H_norm(Rect(Point(x,y),Size(width, height))) = part_H / sqrt(pow(cv::sum(part_H)[0],2) + params_->round_off_);
+			H_norm(Rect(Point(x,y),Size(width, height))) = part_H / sqrt(pow(cv::norm(part_H,cv::NORM_L2),2) + pow(params_->round_off_,2));
+		}
+	}
+	H_norm.reshape(H_norm.channels(),params_->cell_count_x_ * params_->cell_count_y_ * params_->bin_count_).assignTo(features_, CV_32F);
 #ifndef NDEBUG
 	std::cout << "generating features..." << std::endl;
 	std::cout << "HOGParams : " << std::endl;
-	std::cout << "Row wise block count  : "<< block_count_y_ << std::endl;
-	std::cout << "Coloum wise block count : "<< block_count_x_ << std::endl;
+	std::cout << "Row wise block count  : "<< cell_count_y_ << std::endl;
+	std::cout << "Coloum wise block count : "<< cell_count_x_ << std::endl;
 	std::cout << "Bins per block : " << bin_count_ << std::endl;
 #endif
 }
 
 void HOGEvaluator::write_features(string path) {
-
+	std::ofstream out_file(path.c_str(),ofstream::out | ofstream::app);
+	if(out_file.is_open()){
+		ostringstream trimer;
+		trimer << features_;
+		string the_mat = trimer.str();
+		the_mat.erase(0,1);
+		the_mat.erase(the_mat.size()-2,2);
+		the_mat.erase(std::remove(the_mat.begin(),the_mat.end(), ' '),the_mat.end());
+//		cout << the_mat << endl;
+		out_file << the_mat <<endl;
+	}
+	out_file.close();
+//	cv::FileStorage storage(path, cv::FileStorage::APPEND);
+//	storage << features_;
+//	storage.release();
 }
