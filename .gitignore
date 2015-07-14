@@ -39,3 +39,6 @@ Default/
 .cproject
 /Default/
 /Default/
+
+#python
+*.pyc
