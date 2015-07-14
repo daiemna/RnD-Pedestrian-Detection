@@ -8,35 +8,12 @@ from os import walk
 from sklearn.metrics import roc_curve, auc
 from docutils.nodes import legend
 from sklearn.metrics.classification import accuracy_score
+from evaluate_hog import readFeatureCSV
+# from sklearn.svm.libsvm import cross_validation
+from sklearn.cross_validation import KFold
+from numpy import char, round_
 
-def readFeatureCSV(path,label):
-    with open(path, 'rb') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';');
-        feat_vec = [];
-        labels = [];
-        row_num = 0
-        for row in reader:
-            try:
-#                 feats = [float(feat) if feat != '' else 0 for feat in row]
-                feats = [float(feat) for feat in row]
-                if len(feats) <= 0 :
-                    print("length Error in row "+str(row_num) + " file : " + path);
-                    return feat_vec,labels;
-                feat_vec.append(feats);
-                labels.append(label);
-                row_num = row_num + 1;
-            except ValueError:
-                print("Value Error in row "+str(row_num) + " file : " + path);
-                print(row);
-                
-#                 return feat_vec,labels;
-             
-        print("Converting to arrays");       
-        feat_vec = numpy.asarray(feat_vec);
-        labels = numpy.asarray(labels);
-        print("Features Read from files"+ str(feat_vec.shape));
-        return feat_vec,labels
-def readDir_trainSVM(dir_path):
+def readDir(dir_path):
     train_feat=numpy.ndarray((0));
     train_labels=numpy.ndarray((0));
     test_feat=numpy.ndarray((0));
@@ -71,10 +48,8 @@ def readDir_trainSVM(dir_path):
                 print("labels size : "+str(labels.shape))
                 test_feat = numpy.vstack((test_feat,feat));
                 test_labels = numpy.hstack((test_labels,labels));
-    
-    classifier = SVC(probability=True,verbose=True);
-    probs = classifier.fit(train_feat, train_labels).predict_proba(test_feat);
-    return classifier,test_feat,test_labels,probs;
+                
+    return train_feat,train_labels,test_feat,test_labels;
     
 def main(argv):
     if len(argv) < 2:
@@ -84,20 +59,48 @@ def main(argv):
     
     legends= [];
     print("************* HOG form " + argv[1])
-    clf_1,test_1,tl_1,pro_1 = readDir_trainSVM(argv[1]);
-    predict_1 =clf_1.predict(test_1);
-    acc = accuracy_score(tl_1, predict_1)*100;
-    print("Accuracy : "+str(acc) + " %");
-
-    tpr_1,fpr_1,th_1 = roc_curve(tl_1, pro_1[:,1],pos_label=0);
-    pylab.plot(fpr_1,tpr_1,'r');
-    legends.append("form " + argv[1]);
+    train_feat,train_labels,test_feat,test_label = readDir(argv[1]);
+    folds = 10;
+    kf = KFold(len(train_feat), n_folds=folds,shuffle=True);
+    fold_num = 0;
+    best_classifier = [];
+    max_acc = 0;
+    min_acc = 100;
+    for train_index, test_index in kf:
+        print"fold number %d : "%(fold_num)
+        t_data = train_feat[train_index];
+        t_labels = train_labels[train_index];
+        v_data = train_feat[test_index];
+        v_labels = train_labels[test_index];
+        
+        classifier = SVC(probability=True,verbose=True);
+        classifier.fit(t_data, t_labels);
+        predictions =classifier.predict(v_data);
+        
+        acc = accuracy_score(v_labels, predictions)*100;
+        print("Accuracy : "+str(acc) + " %");
+        if acc > max_acc :
+            max_acc = acc;
+            best_classifier = classifier;
+        if acc < min_acc :
+            min_acc = acc;
+    
+    probs = best_classifier.predict_proba(test_feat);
+    predictions =classifier.predict(test_feat);    
+    acc = accuracy_score(test_label, predictions)*100;    
+    tpr,fpr,th = roc_curve(test_label, probs[:,1],pos_label=0);
+        
+    pylab.plot(fpr,tpr,'r');
+    legends.append("HOG Dalal and Trigs");
      
     pylab.plot(numpy.arange(0,1.1,0.1),numpy.arange(0,1.1,0.1),'k--')
     pylab.plot(numpy.arange(1,-0.1,-0.1),numpy.arange(0,1.1,0.1),'g--')
     pylab.legend(legends);
- 
-    pylab.title('ROC'+" Accuracy : "+str(acc) + " %");
+    
+    mean_acc = round((max_acc + min_acc) / 2);
+    var_acc = round_(max_acc - mean_acc,2);
+    
+    pylab.title(str(folds)+" folds verification ROC, accuracy : "+str(mean_acc) + " +- "+str(var_acc)+" %")
     pylab.xlabel('False Positive Rate');
     pylab.ylabel('True Positive Rate');
     pylab.grid('on')

@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include "hog_features.h"
+#include "hog_lite_features.h"
 
 using namespace cv;
 #define ERROR_LOG printf
@@ -15,63 +16,40 @@ using namespace cv;
 #define DEBUG_STREAM cout
 
 int test_features(int argc, char **argv);
+int test_lite_features(int argc, char **argv);
 int testFilter(int argc, char **argv);
 int testFile();
 int read_image_dir(int argc, char **argv);
-int genrate_cv_HOG(int argc, char **argv);
+void hsv_histogram(Mat,Mat);
+int test_calcHist(int,char**);
+//int genrate_cv_HOG(int argc, char **argv);
+
 
 int main(int argc, char **argv) {
 //	test_features(argc,argv);
 //	testFile();
-	read_image_dir(argc,argv);
+	test_lite_features(argc,argv);
+//	test_calcHist(argc,argv);
+//	read_image_dir(argc,argv);
 }
-int genrate_cv_HOG(int argc, char **argv){
-//	if(argc != 3){
-//			ERROR_LOG("Usage id ./Main path/to/image/folder path/to/csv/file.csv\n");
-//			return -1;
-//		}
-//		string dir(argv[1]), delm = " ";
-//		DIR *dp,*odp;
-//		struct dirent *dirp;
-//		struct stat filestat;
-//		ofstream out_file;
-//
-//		dp = opendir(argv[1]);
-//		if (dp == NULL){
-//			ERROR_LOG("Error(%d): opening %s\n",errno,argv[1]);
-//			return errno;
-//		}
-//
-//		cv::HOGDescriptor* fe = new cv::HOGDescriptor(Size(64,128),Size(),Size(),Size(),9);
-//		while((dirp = readdir( dp ))){
-//			string filepath = dir + "/" + dirp->d_name;
-//
-//			// If the file is a directory (or is in some way invalid) we'll skip it
-//			if (stat(filepath.c_str(), &filestat)) continue;
-//			if (S_ISDIR(filestat.st_mode))         continue;
-//
-//			DEBUG_LOG("reading file %s\n",filepath.c_str());
-//			Mat frame;
-//			frame = imread(filepath.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
-//			resize(frame,frame,Size(64,128));
-//			if(!frame.data){
-//				ERROR_LOG("Cannot open image %s\n",filepath.c_str());
-//				continue;
-//			}else{
-//				DEBUG_STREAM << "image read!" << endl;
-//			}
-//
-//			if(fe->setImage(frame,Size(0,0))){
-//				fe->generate_features();
-//				fe->write_features(argv[2]);
-//				DEBUG_STREAM << "Features : " << fe->features_.rows << endl;
-//			}else{
-//				DEBUG_STREAM << "setImage Failed" << endl;
-//			}
-//		}
-//		closedir(dp);
-////		out_file.close();
-//		return 0;
+int test_lite_features(int argc, char **argv){
+	if(argc < 2){
+		cout << "usage is : " << argv[0] << " path\\to\\image" << endl;
+		return -1;
+	}
+	Mat img = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE);
+	feat::HOGLiteEvaluator fe; //= new feat::HOGEvaluator();
+	resize(img,img,Size(64,128));
+	if(fe.setImage(img,Size(0,0))){
+//		fe.generate_features();
+		fe.write_features("features.csv");
+		cout << "Features : " << fe.features_.rows<< endl;
+	}else{
+		cout << "setImage Failed" << endl;
+	}
+	cout << "exiting..." << endl;
+	exit(0);
+	return -1;
 }
 int read_image_dir(int argc, char **argv){
 	if(argc != 3){
@@ -129,12 +107,13 @@ int test_features(int argc, char **argv){
 //	cout << "Image name : " << argv[1] << endl;
 	Mat img = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE);
 //	cout << "image size : " << img.cols << "x" << img.rows << endl;
-	feat::HOGEvaluator fe; //= new feat::HOGEvaluator();
-	resize(img,img,Size(64,64));
+	feat::HOGLiteEvaluator fe; //= new feat::HOGEvaluator();
+	resize(img,img,Size(64,128));
 	if(fe.setImage(img,Size(0,0))){
 		fe.generate_features();
 		fe.write_features("features.csv");
-		cout << "Features : " << fe.features_.cols << endl;
+		cout << "Features : " << fe.features_.rows<< endl;
+//		cout << "Features : " << fe.features_ << endl;
 	}else{
 		cout << "setImage Failed" << endl;
 	}
@@ -221,3 +200,52 @@ int testFile(){
 
 	return 0;
 }
+int test_calcHist(int argc, char ** argv){
+	if(argc < 2){
+		cout << "usage is : " << argv[0] << " path\\to\\image" << endl;
+		return -1;
+	}
+	Mat hist_base;
+	Mat Frame = imread(argv[1],CV_LOAD_IMAGE_COLOR);
+	Mat hsv_base;
+//	cout << "Frame  type : " << (Frame.type() == CV_8U) << endl;
+//	cout << "Frame  channels : " << Frame.channels() << endl;
+	cv::cvtColor( Frame, hsv_base, CV_BGR2HSV);
+	int h_bins = 50;
+	int s_bins = 32;
+	int v_bins = 10;
+
+	int histSize[] = { h_bins, s_bins, v_bins };
+
+	float h_ranges[] = { 0, 256 };
+	float s_ranges[] = { 0, 256 };
+	float v_ranges[] = { 0, 256 };
+
+	const float* ranges[] = { h_ranges, s_ranges ,v_ranges};
+	int channels[] = { 0, 1 ,2};
+	calcHist( &hsv_base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
+
+	cout << "Histogram : " << hist_base.cols << endl;
+//	cv::waitKey(0);
+	cout << "exiting..." << endl;
+	exit(0);
+	return -1;
+}
+//void hsv_histogram(Mat Frame, Mat hist_base)
+//{
+//	Mat hsv_base;
+//	cv::cvtColor( Frame, hsv_base, CV_BGR2HSV );
+//	int h_bins = 50;
+//	int s_bins = 32;
+//	int v_bins = 10;
+//
+//	int histSize[] = { h_bins, s_bins, v_bins };
+//
+//	float h_ranges[] = { 0, 256 };
+//	float s_ranges[] = { 0, 180 };
+//	float v_ranges[] = { 0, 256 };
+//
+//	const float* ranges[] = { h_ranges, s_ranges ,v_ranges};
+//	int channels[] = { 0, 1 ,2};
+//	calcHist( &hsv_base, 1, channels, Mat(), hist_base, 3, histSize, ranges, true, false );
+//}

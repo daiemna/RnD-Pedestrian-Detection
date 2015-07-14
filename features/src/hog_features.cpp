@@ -19,8 +19,10 @@ using namespace feat;
 // ------------------------------------------------------------
 
 HOGParams::HOGParams() :
-		pixel_per_cell_(6, 6), cell_per_block_(1, 1), block_stride_(1, 1), image_norm_(
-				true) {
+		pixel_per_cell_(6, 6),
+		cell_per_block_(1, 1),
+		block_stride_(1, 1),
+		image_norm_(true) {
 	cell_count_x_ = 0;
 	cell_count_y_ = 0;
 	bin_count_ = 9;
@@ -166,8 +168,13 @@ void HOGEvaluator::generate_features() {
 	Mat grad_yu;
 	filter2D(current_image_, grad_yu, ddepth, hy, anchor, delta,
 			BORDER_DEFAULT);
-	Mat angles, magnit;
+	Mat angles, magnit, mask, rect_angles;
 	cartToPolar(grad_xr, grad_yu, magnit, angles, false);
+
+	//correcting range b/w 0 to 180
+	inRange(angles,M_PI+(params_->round_off_*M_PI/180), 2*M_PI,mask);
+	add(angles, -M_PI,angles,mask);
+
 	for (int n = 0; n < params_->cell_count_y_; n++) {
 		for (int m = 0; m < params_->cell_count_x_; m++) {
 			cont += 1;
@@ -178,22 +185,25 @@ void HOGEvaluator::generate_features() {
 					Range(m * step_x, (m + 1) * step_x));
 			Mat v_angles = angles2.clone().reshape(angles2.channels(), 1);
 			Mat v_magnit = magnit2.clone().reshape(magnit2.channels(), 1);
+
 			int K = v_angles.cols;
 			int bin = 0;
-			Mat part_H = H(
-					Rect(Point(0, (cont - 1) * params_->bin_count_),
+			Mat part_H = H(Rect(Point(0, (cont - 1) * params_->bin_count_),
 							Size(1, params_->bin_count_)));
-			for (float ang_lim = -M_PI + 2 * M_PI / params_->bin_count_;
+			for (float ang_lim = M_PI / params_->bin_count_;
 					ang_lim <= M_PI;
-					ang_lim += 2 * M_PI / params_->bin_count_) {
-				bin = bin + 1;
-				for (int k = 0; k <= K; k++) {
-					if (v_angles.at<float>(k) < ang_lim) {
-//						v_angles.at<float>(k) = 100;
-						part_H.at<float>(bin) = part_H.at<float>(bin)
-								+ v_magnit.at<float>(k);
-					}
-				}
+					ang_lim += M_PI / params_->bin_count_,
+					bin = bin + 1) {
+				Mat sum_these;
+				double lower_lim = ang_lim-M_PI / params_->bin_count_;
+				double upper_lim = ang_lim-(M_PI/180);
+				if(bin == params_->bin_count_ - 1)
+					upper_lim = ang_lim;
+
+				inRange(v_angles,lower_lim, upper_lim,sum_these);
+
+				multiply(v_magnit,(sum_these/255),sum_these,1,CV_32F);
+				part_H.at<float>(bin) = sum(sum_these)[0];
 			}
 		}
 	}
@@ -228,7 +238,8 @@ void HOGEvaluator::write_features(string path) {
 		trimer << features_;
 		string the_mat = trimer.str();
 		the_mat.erase(0, 1);
-		the_mat.erase(the_mat.size() - 2, 2);
+		the_mat.erase(the_mat.size() - 1, 1);
+//		cout << "Features : " << the_mat <<"*"<< endl;
 		the_mat.erase(std::remove(the_mat.begin(), the_mat.end(), ' '),
 				the_mat.end());
 		out_file << the_mat << endl;
