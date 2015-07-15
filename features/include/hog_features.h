@@ -66,13 +66,17 @@ namespace feat{
 		Mat features_;
 
 	protected:
+		Mat histogram_image_;
 		bool resetFeatures();
 		Mat current_image_;
 		Ptr<Size> win_size_;
 		Ptr<Point> win_pos_;
 		bool replaceImage(Mat img);
-	private:
+		void resetHistogramImage(Mat);
+		bool genrateHistogramImage();
 		Ptr<HOGParams> params_;
+//	private:
+//		Ptr<HOGParams> params_;
 	};
 }// end namespace feat
 // ------------------------------------------------------------

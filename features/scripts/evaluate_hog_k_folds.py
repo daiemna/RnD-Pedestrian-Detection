@@ -60,7 +60,7 @@ def main(argv):
     legends= [];
     print("************* HOG form " + argv[1])
     train_feat,train_labels,test_feat,test_label = readDir(argv[1]);
-    folds = 10;
+    folds = 5;
     kf = KFold(len(train_feat), n_folds=folds,shuffle=True);
     fold_num = 0;
     best_classifier = [];

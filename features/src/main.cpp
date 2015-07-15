@@ -20,18 +20,68 @@ int test_lite_features(int argc, char **argv);
 int testFilter(int argc, char **argv);
 int testFile();
 int read_image_dir(int argc, char **argv);
-void hsv_histogram(Mat,Mat);
 int test_calcHist(int,char**);
-//int genrate_cv_HOG(int argc, char **argv);
+int read_image_dir_hog_lite(int argc, char **argv);
 
 
 int main(int argc, char **argv) {
 //	test_features(argc,argv);
 //	testFile();
-	test_lite_features(argc,argv);
+//	test_lite_features(argc,argv);
 //	test_calcHist(argc,argv);
 //	read_image_dir(argc,argv);
+	read_image_dir_hog_lite(argc,argv);
 }
+
+
+int read_image_dir_hog_lite(int argc, char **argv){
+	if(argc != 3){
+			ERROR_LOG("Usage id ./Main path/to/image/folder path/to/csv/file.csv\n");
+			return -1;
+		}
+		string dir(argv[1]), delm = " ";
+		DIR *dp,*odp;
+		struct dirent *dirp;
+		struct stat filestat;
+		ofstream out_file;
+
+		dp = opendir(argv[1]);
+		if (dp == NULL){
+			ERROR_LOG("Error(%d): opening %s\n",errno,argv[1]);
+			return errno;
+		}
+		feat::HOGLiteEvaluator* fe = new feat::HOGLiteEvaluator();
+		while((dirp = readdir( dp ))){
+			string filepath = dir + "/" + dirp->d_name;
+
+			// If the file is a directory (or is in some way invalid) we'll skip it
+			if (stat(filepath.c_str(), &filestat)) continue;
+			if (S_ISDIR(filestat.st_mode))         continue;
+
+			DEBUG_LOG("reading file %s\n",filepath.c_str());
+			Mat frame;
+			frame = imread(filepath.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+			resize(frame,frame,Size(64,128));
+			if(!frame.data){
+				ERROR_LOG("Cannot open image %s\n",filepath.c_str());
+				continue;
+			}else{
+				DEBUG_STREAM << "image read!" << endl;
+			}
+
+			if(fe->setImage(frame,Size(0,0))){
+				fe->generate_features();
+				fe->write_features(argv[2]);
+				DEBUG_STREAM << "Features : " << fe->features_.rows << endl;
+			}else{
+				DEBUG_STREAM << "setImage Failed" << endl;
+			}
+		}
+		closedir(dp);
+//		out_file.close();
+		return 0;
+}
+
 int test_lite_features(int argc, char **argv){
 	if(argc < 2){
 		cout << "usage is : " << argv[0] << " path\\to\\image" << endl;
@@ -41,7 +91,7 @@ int test_lite_features(int argc, char **argv){
 	feat::HOGLiteEvaluator fe; //= new feat::HOGEvaluator();
 	resize(img,img,Size(64,128));
 	if(fe.setImage(img,Size(0,0))){
-//		fe.generate_features();
+		fe.generate_features();
 		fe.write_features("features.csv");
 		cout << "Features : " << fe.features_.rows<< endl;
 	}else{

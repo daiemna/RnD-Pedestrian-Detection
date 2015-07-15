@@ -21,6 +21,8 @@ using namespace feat;
 HOGLiteParams::HOGLiteParams(): HOGParams(),
 		pixel_per_cell_(4,4),
 		magnitude_threshold_(0.25){
+	bin_count_ = BIN_COUNT;
+
 }
 
 HOGLiteParams::~HOGLiteParams() {
@@ -51,26 +53,36 @@ HOGLiteEvaluator::HOGLiteEvaluator(){
 	params_ = new HOGLiteParams();
 	win_size_ = new Size(0, 0);
 	win_pos_ = new Point(0, 0);
+	imageDecompressed_ = false;
 }
 
 HOGLiteEvaluator::~HOGLiteEvaluator() {
 	params_.delete_obj();
 }
 
-bool HOGLiteEvaluator::setImage(Mat image,Size origWinSize){
-	return (HOGEvaluator::setImage(image,origWinSize) &&
-			compressImage());
+bool HOGLiteEvaluator::resetFeatures(){
+	if (histogram_image_.data) {
+		histogram_image_.release();
+		return HOGEvaluator::resetFeatures();
+	}
+	return false;
 }
 
-bool HOGLiteEvaluator::compressImage(){
+bool HOGLiteEvaluator::setImage(Mat image,Size origWinSize){
+	return (HOGEvaluator::setImage(image,origWinSize) &&
+			genrateHistogramImage());
+}
+
+bool HOGLiteEvaluator::genrateHistogramImage(){
 	if (current_image_.empty()) {
 		cout << "Error : No Image Found!" << endl;
 		return false;
 	}
-	params_->cell_count_x_ = current_image_.rows/params_->getPixelPerCell().height;
-	params_->cell_count_y_ = current_image_.cols/params_->getPixelPerCell().width;
-	histogram_image_ = Mat::zeros(1,params_->cell_count_y_*params_->cell_count_x_,CV_32S);
-	cout << "size histogram image : " << histogram_image_.rows <<" , " << histogram_image_.cols << endl;
+	Ptr<HOGLiteParams> params = params_;
+	params_->cell_count_x_ = current_image_.rows/params->getPixelPerCell().height;
+	params_->cell_count_y_ = current_image_.cols/params->getPixelPerCell().width;
+	resetHistogramImage(Mat::zeros(1,params_->cell_count_y_*params_->cell_count_x_,CV_32S));
+//	cout << "size histogram image : " << histogram_image_.rows <<" , " << histogram_image_.cols << endl;
 	uint_t step_x = floor((float) win_size_->width / ((float) params_->cell_count_x_));
 	uint_t step_y = floor((float) win_size_->height / ((float) params_->cell_count_y_));
 	uint_t cont = 0;
@@ -92,8 +104,8 @@ bool HOGLiteEvaluator::compressImage(){
 	Mat magnitudes = abs(grad_x) + abs(grad_y);
 	double min = 0, max = 0;
 	cv::minMaxLoc(magnitudes,&min,&max);
-	double threshold = min + (max-min)*params_->magnitude_threshold_;
-	cout << "Magnitude Mat  min, max: " << min <<" , " << max << endl;
+	double threshold = min + (max-min)*params->magnitude_threshold_;
+//	cout << "Magnitude Mat  min, max: " << min <<" , " << max << endl;
 	cout << "Threshold : " << threshold << endl;
 	magnitudes = magnitudes >= threshold;
 
@@ -104,13 +116,13 @@ bool HOGLiteEvaluator::compressImage(){
 //		cv::minMaxLoc(magnitudes,&min,&max);
 //		cout << "Magnitudes : " << magnitudes << endl;
 	int histimage_index = 0;
-	for(int x = 0; x + params_->getPixelPerCell().width <= magnitudes.cols; x += params_->getPixelPerCell().width){
-		for(int y = 0; y + params_->getPixelPerCell().height<= magnitudes.rows ; y += params_->getPixelPerCell().height){
+	for(int x = 0; x + params->getPixelPerCell().width <= magnitudes.cols; x += params->getPixelPerCell().width){
+		for(int y = 0; y + params->getPixelPerCell().height<= magnitudes.rows ; y += params->getPixelPerCell().height){
 
-			Mat part_ori = orientations(Range(y,y+params_->getPixelPerCell().height),Range(x,x+ params_->getPixelPerCell().width))
+			Mat part_ori = orientations(Range(y,y+params->getPixelPerCell().height),Range(x,x+ params->getPixelPerCell().width))
 					.clone()
 					.reshape(1,1);
-			Mat part_mag = magnitudes(Range(y,y+params_->getPixelPerCell().height),Range(x,x+ params_->getPixelPerCell().width))
+			Mat part_mag = magnitudes(Range(y,y+params->getPixelPerCell().height),Range(x,x+ params->getPixelPerCell().width))
 					.clone()
 					.reshape(1,1);
 			SIZE32_MEMORY hist[BIN_COUNT] = {0,0,0,0,0,0,0,0};
@@ -126,6 +138,7 @@ bool HOGLiteEvaluator::compressImage(){
 					if(hist[part_ori.at<unsigned char>(i)] == MAX_BIN_VALUE)
 					{
 						hist[part_ori.at<unsigned char>(i)] = MAX_BIN_VALUE -1;
+						cout << "Over Flows Occurred!" << endl;
 					}
 				}
 			}
@@ -139,6 +152,7 @@ bool HOGLiteEvaluator::compressImage(){
 //			printf("hex value for hist pix : %x\n",hist_pixel);
 		}
 	}
+//	cout << "cell_count_Y : " << params_->cell_count_y_ << endl;
 	histogram_image_ = histogram_image_.reshape(1,params_->cell_count_y_);
 //	cout << "histogram_image_ : " << histogram_image_.rows << " , " << histogram_image_.cols << endl;
 //	cout << "histogram_image_ : " << histogram_image_ << endl;
@@ -146,94 +160,60 @@ bool HOGLiteEvaluator::compressImage(){
 //	namedWindow( "Display window", WINDOW_AUTOSIZE );
 //	imshow( "Display window", histogram_image_);
 //	waitKey(0);
+	imageDecompressed_ = false;
 	return true;
 }
 
+void HOGLiteEvaluator::decompressImage(){
+	if (histogram_image_.empty()) {
+		cout << "Error : No histogram Image Found!" << endl;
+		return;
+	}
+	if(imageDecompressed_){
+		return;
+	}
+//	cout << "decompressImage" << endl;
+	Mat reformed_image = Mat::zeros(params_->cell_count_y_,params_->cell_count_x_*BIN_COUNT,CV_32F);
+	for(int row = 0 ; row < params_->cell_count_y_; row++){
+		int reformed_cols = 0;
+		for(int col = 0; col < params_->cell_count_x_; col++){
+			SIZE32_MEMORY hist_pix = histogram_image_.at<SIZE32_MEMORY>(Point(col,row));
+			Mat part_hist = reformed_image(Rect(reformed_cols,row,BIN_COUNT,1));
+			bool firstNZ = false;
+			bool secondNZ = false;
+			int bin_ind_15 = -1;
+			for(int bin_ind = 0; bin_ind < BIN_COUNT; bin_ind++){
+				SIZE32_MEMORY mask = 0x0000000f;
+				mask = mask << bin_ind*BIN_BIT_COUNT;
+				part_hist.at<float>(bin_ind) = float((hist_pix & mask) >> bin_ind*BIN_BIT_COUNT);
+				if(firstNZ && part_hist.at<float>(bin_ind) > 0){
+					secondNZ = true;
+				}
+				if(part_hist.at<float>(bin_ind) > 0){
+					firstNZ = true;
+				}
+				if(part_hist.at<float>(bin_ind) == MAX_BIN_VALUE -1){
+					bin_ind_15 = bin_ind;
+				}
+			}
+//			cout << "Bins are : " << part_hist << endl;
+			if(secondNZ && bin_ind_15 > -1){
+				part_hist.at<float>(bin_ind_15) = MAX_BIN_VALUE;
+				cout << "Over Flows Resolved!" << endl;
+			}
+			reformed_cols += BIN_COUNT;
+		}
+	}
+	resetHistogramImage(reformed_image.clone());
+	imageDecompressed_ = true;
+//	cout << "End decompressImage" << endl;
+}
+
 void HOGLiteEvaluator::generate_features() {
-// 	if (current_image_.empty()) {
-// 		cout << "Error : No Image Found!" << endl;
-// 		return;
-// 	}
-// 	Mat H = Mat::zeros(
-// 			params_->cell_count_x_ * params_->cell_count_y_
-// 					* params_->bin_count_, 1, CV_32F);
-// 	uint_t step_x = floor(
-// 			(float) win_size_->width / ((float) params_->cell_count_x_));
-// 	uint_t step_y = floor(
-// 			(float) win_size_->height / ((float) params_->cell_count_y_));
-// 	uint_t cont = 0;
-// 	Mat hx = Mat::zeros(1, 2, CV_32F);
-// 	hx.at<float>(0) = -1;
-// 	hx.at<float>(1) = 1;
-// 	Mat hy = (-hx.clone()).t();
-// 	Point anchor = Point(-1, -1);
-// 	double delta = 0.0;
-// 	int ddepth = -1;
-// 	Mat grad_xr;
-// 	filter2D(current_image_, grad_xr, ddepth, hx, anchor, delta,
-// 			BORDER_DEFAULT);
-// 	Mat grad_yu;
-// 	filter2D(current_image_, grad_yu, ddepth, hy, anchor, delta,
-// 			BORDER_DEFAULT);
-// 	Mat angles, magnit, mask, rect_angles;
-// 	cartToPolar(grad_xr, grad_yu, magnit, angles, false);
-
-// 	//correcting range b/w 0 to 180
-// 	inRange(angles,M_PI+(params_->round_off_*M_PI/180), 2*M_PI,mask);
-// 	add(angles, -M_PI,angles,mask);
-
-// 	for (int n = 0; n < params_->cell_count_y_; n++) {
-// 		for (int m = 0; m < params_->cell_count_x_; m++) {
-// 			cont += 1;
-// 			Mat angles2, magnit2;
-// 			angles2 = angles(Range(n * step_y, (n + 1) * step_y),
-// 					Range(m * step_x, (m + 1) * step_x));
-// 			magnit2 = magnit(Range(n * step_y, (n + 1) * step_y),
-// 					Range(m * step_x, (m + 1) * step_x));
-// 			Mat v_angles = angles2.clone().reshape(angles2.channels(), 1);
-// 			Mat v_magnit = magnit2.clone().reshape(magnit2.channels(), 1);
-
-// 			int K = v_angles.cols;
-// 			int bin = 0;
-// 			Mat part_H = H(Rect(Point(0, (cont - 1) * params_->bin_count_),
-// 							Size(1, params_->bin_count_)));
-// 			for (float ang_lim = M_PI / params_->bin_count_;
-// 					ang_lim <= M_PI;
-// 					ang_lim += M_PI / params_->bin_count_,
-// 					bin = bin + 1) {
-// 				Mat sum_these;
-// 				double lower_lim = ang_lim-M_PI / params_->bin_count_;
-// 				double upper_lim = ang_lim-(M_PI/180);
-// 				if(bin == params_->bin_count_ - 1)
-// 					upper_lim = ang_lim;
-
-// 				inRange(v_angles,lower_lim, upper_lim,sum_these);
-
-// 				multiply(v_magnit,(sum_these/255),sum_these,1,CV_32F);
-// 				part_H.at<float>(bin) = sum(sum_these)[0];
-// 			}
-// 		}
-// 	}
-// 	H = H.reshape(H.channels(), params_->cell_count_y_);
-// 	Mat H_norm = Mat::zeros(H.rows, H.cols, H.type());
-// 	for (int y = 0; y < H.rows; y += params_->block_stride_.height) {
-// 		for (int x = 0; x < H.cols;
-// 				x += params_->block_stride_.width * params_->bin_count_) {
-// 			int width = params_->bin_count_ * params_->cell_per_block_.width;
-// 			int height = params_->cell_per_block_.height;
-// 			if (y + height > H.rows) {
-// 				height = H.rows - y;
-// 			}
-// 			if (x + width > H.cols) {
-// 				width = H.cols - x;
-// 			}
-// 			Mat part_H = H(Rect(Point(x, y), Size(width, height))).clone();
-// //			H_norm(Rect(Point(x,y),Size(width, height))) = part_H / sqrt(pow(cv::sum(part_H)[0],2) + params_->round_off_);
-// 			H_norm(Rect(Point(x, y), Size(width, height))) = part_H
-// 					/ sqrt(pow(cv::norm(part_H, cv::NORM_L2), 2) + pow(params_->round_off_, 2));
-// 		}
-// 	}
-// 	H_norm.reshape(H_norm.channels(),
-// 			params_->cell_count_x_ * params_->cell_count_y_
-// 					* params_->bin_count_).assignTo(features_, CV_32F);
+ 	if (current_image_.empty()) {
+ 		cout << "Error : No Image Found!" << endl;
+ 		return;
+ 	}
+ 	decompressImage();
+ 	HOGEvaluator::generate_features();
 }

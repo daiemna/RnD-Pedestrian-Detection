@@ -96,6 +96,13 @@ bool HOGEvaluator::replaceImage(Mat img) {
 	return true;
 }
 
+void HOGEvaluator::resetHistogramImage(Mat hist){
+	if (histogram_image_.data) {
+			histogram_image_.release();
+	}
+	hist.assignTo(histogram_image_);
+}
+
 int HOGEvaluator::getFeatureType() {
 	return HOGEvaluator::HOG;
 }
@@ -142,14 +149,16 @@ bool HOGEvaluator::resetFeatures() {
 	}
 	return false;
 }
-void HOGEvaluator::generate_features() {
+
+bool HOGEvaluator::genrateHistogramImage(){
 	if (current_image_.empty()) {
 		cout << "Error : No Image Found!" << endl;
-		return;
+		return false;
 	}
-	Mat H = Mat::zeros(
+	resetHistogramImage(Mat::zeros(
 			params_->cell_count_x_ * params_->cell_count_y_
-					* params_->bin_count_, 1, CV_32F);
+					* params_->bin_count_, 1, CV_32F));
+//	Mat histogram_image_;
 	uint_t step_x = floor(
 			(float) win_size_->width / ((float) params_->cell_count_x_));
 	uint_t step_y = floor(
@@ -188,7 +197,7 @@ void HOGEvaluator::generate_features() {
 
 			int K = v_angles.cols;
 			int bin = 0;
-			Mat part_H = H(Rect(Point(0, (cont - 1) * params_->bin_count_),
+			Mat part_H = histogram_image_(Rect(Point(0, (cont - 1) * params_->bin_count_),
 							Size(1, params_->bin_count_)));
 			for (float ang_lim = M_PI / params_->bin_count_;
 					ang_lim <= M_PI;
@@ -207,25 +216,35 @@ void HOGEvaluator::generate_features() {
 			}
 		}
 	}
-	H = H.reshape(H.channels(), params_->cell_count_y_);
-	Mat H_norm = Mat::zeros(H.rows, H.cols, H.type());
-	for (int y = 0; y < H.rows; y += params_->block_stride_.height) {
-		for (int x = 0; x < H.cols;
+	histogram_image_ = histogram_image_.reshape(histogram_image_.channels(), params_->cell_count_y_);
+	return true;
+}
+
+void HOGEvaluator::generate_features() {
+
+	Mat H_norm = Mat::zeros(histogram_image_.rows, histogram_image_.cols, histogram_image_.type());
+	for (int y = win_pos_->y; y < histogram_image_.rows; y += params_->block_stride_.height) {
+		for (int x = win_pos_->x * params_->bin_count_; x < histogram_image_.cols;
 				x += params_->block_stride_.width * params_->bin_count_) {
 			int width = params_->bin_count_ * params_->cell_per_block_.width;
 			int height = params_->cell_per_block_.height;
-			if (y + height > H.rows) {
-				height = H.rows - y;
+			if (y + height > histogram_image_.rows) {
+				height = histogram_image_.rows - y;
 			}
-			if (x + width > H.cols) {
-				width = H.cols - x;
+			if (x + width > histogram_image_.cols) {
+				width = histogram_image_.cols - x;
 			}
-			Mat part_H = H(Rect(Point(x, y), Size(width, height))).clone();
+			Mat part_H = histogram_image_(Rect(Point(x, y), Size(width, height))).clone();
 //			H_norm(Rect(Point(x,y),Size(width, height))) = part_H / sqrt(pow(cv::sum(part_H)[0],2) + params_->round_off_);
 			H_norm(Rect(Point(x, y), Size(width, height))) = part_H
 					/ sqrt(pow(cv::norm(part_H, cv::NORM_L2), 2) + pow(params_->round_off_, 2));
 		}
 	}
+//	cout << "reshaping in generate_features" << endl;
+//	cout << "cell count x : " << params_->cell_count_x_ << endl;
+//	cout << "cell count y : " << params_->cell_count_y_ << endl;
+//	cout << "bin count : " << params_->bin_count_ << endl;
+//	cout << "H_norm : " <<H_norm.rows << " , " << H_norm.cols << endl;
 	H_norm.reshape(H_norm.channels(),
 			params_->cell_count_x_ * params_->cell_count_y_
 					* params_->bin_count_).assignTo(features_, CV_32F);

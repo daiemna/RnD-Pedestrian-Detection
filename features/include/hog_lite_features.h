@@ -67,11 +67,13 @@ namespace feat{
 		bool setImage(Mat,Size);
 		void generate_features();
 	protected:
-		Mat histogram_image_;
-		bool compressImage();
+		bool genrateHistogramImage();
 		void decompressImage();
+		bool resetFeatures();
+
 	private:
-		Ptr<HOGLiteParams> params_;
+//		Ptr<HOGLiteParams> params_;
+		bool imageDecompressed_;
 	};
 
 }// end namespace feat
