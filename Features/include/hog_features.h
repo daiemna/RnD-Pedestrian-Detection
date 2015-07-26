@@ -15,6 +15,8 @@
 #include <opencv2/opencv.hpp>
 //#include <bitset>
 
+#include "FeatureEvaluator.h"
+
 using namespace std;
 using namespace cv;
 #ifndef uint_t
@@ -49,20 +51,19 @@ namespace feat{
 		bool image_norm_;
 	};
 	
-	class HOGEvaluator : public cv::FeatureEvaluator{
+	class HOGEvaluator : public feat::FeatureEvaluator{
 	public:
 		enum{HOG=2};
 		HOGEvaluator();
 		virtual ~HOGEvaluator();
 
 		//Methods From FeatureEvaluator
-		bool setImage(Mat,Size);
+		bool setImage(const Mat&,Size);
 		bool setWindow(Point);
 		int getFeatureType();
-	
+		int getFeatureCount() const;
 		float operator()(int feature_idx) const;
-		void generate_features();
-		void write_features(string path);
+//		void write_features(string path);
 		Mat features_;
 
 	protected:
@@ -73,7 +74,8 @@ namespace feat{
 		Ptr<Point> win_pos_;
 		bool replaceImage(Mat img);
 		void resetHistogramImage(Mat);
-		bool genrateHistogramImage();
+		bool virtual genrateHistogramImage();
+		void virtual genrateFeatures();
 		Ptr<HOGParams> params_;
 //	private:
 //		Ptr<HOGParams> params_;
@@ -87,6 +89,10 @@ inline float feat::HOGEvaluator::operator()(int feature_idx) const{
 		return -1.0;
 	}
 	return features_.at<float>(feature_idx);
+}
+
+inline int feat::HOGEvaluator::getFeatureCount()const{
+	return params_->bin_count_ * params_->cell_count_x_ * params_->cell_count_y_;
 }
 
 #endif 

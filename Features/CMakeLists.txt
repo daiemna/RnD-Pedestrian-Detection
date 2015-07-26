@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-project(features)
+project(Features)
 
 # SET(CMAKE_CXX_FLAGS 
 # 	"-pthread"
@@ -41,7 +41,7 @@ endif()
 # MESSAGE(STATUS "\nInclude dir: "${FH_IMAGE}"/include")
 
 INCLUDE_DIRECTORIES("include/")
-INCLUDE_DIRECTORIES(${INCLUDE_DIR})
+# INCLUDE_DIRECTORIES(${INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${FH_IMAGE_INCLUDE})
 
 
@@ -58,7 +58,7 @@ if(NOT OPENCV_PATH)
 endif()
 
 set(OPENCV_INCLUDE_DIR "${OPENCV_PATH}../")
-set(OPENCV_LIBRARY_DIR "${OPENCV_PATH}../../lib/")
+# set(OPENCV_LIBRARY_DIR "${OPENCV_PATH}../../lib/")
 set(OPENCV_LIBRARY  "-lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_objdetect -lopencv_ocl -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab")
 
 include_directories(${OPENCV_INCLUDE_DIR})
@@ -66,5 +66,5 @@ link_directories(${OPENCV_LIBRARY_DIRS})
 
 
 add_library(_${PROJECT_NAME} SHARED ${SOURCES})
-add_executable(Main ${SOURCES} ${FH_IMAGE_SOURCES})
-target_link_libraries(Main _${PROJECT_NAME} ${FH_IMAGE_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY} ${OPENCV_LIBRARY})
+# add_executable(Main ${SOURCES})
+# target_link_libraries(Main _${PROJECT_NAME} ${OPENCV_LIBRARY})

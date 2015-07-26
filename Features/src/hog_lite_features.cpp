@@ -75,7 +75,7 @@ bool HOGLiteEvaluator::setImage(Mat image,Size origWinSize){
 
 bool HOGLiteEvaluator::genrateHistogramImage(){
 	if (current_image_.empty()) {
-		cout << "Error : No Image Found!" << endl;
+		 cout<< "Error : No Image Found!" << endl;
 		return false;
 	}
 	Ptr<HOGLiteParams> params = params_;
@@ -106,7 +106,7 @@ bool HOGLiteEvaluator::genrateHistogramImage(){
 	cv::minMaxLoc(magnitudes,&min,&max);
 	double threshold = min + (max-min)*params->magnitude_threshold_;
 //	cout << "Magnitude Mat  min, max: " << min <<" , " << max << endl;
-	cout << "Threshold : " << threshold << endl;
+//	cout << "Threshold : " << threshold << endl;
 	magnitudes = magnitudes >= threshold;
 
 //		namedWindow( "Display window", WINDOW_AUTOSIZE );
@@ -215,5 +215,5 @@ void HOGLiteEvaluator::generate_features() {
  		return;
  	}
  	decompressImage();
- 	HOGEvaluator::generate_features();
+ 	HOGEvaluator::genrateFeatures();
 }

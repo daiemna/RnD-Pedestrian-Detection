@@ -65,7 +65,7 @@ void HOGParams::printToStream(ostream& stream) {
 // -------------------- FeatureEvaluator ----------------------
 // ------------------------------------------------------------
 
-bool HOGEvaluator::setImage(Mat img, Size origWinSize) {
+bool HOGEvaluator::setImage(const Mat& img, Size origWinSize) {
 	if (origWinSize.width <= 0 && origWinSize.height <= 0) {
 		origWinSize.width = img.cols;
 		origWinSize.height = img.rows;
@@ -78,13 +78,14 @@ bool HOGEvaluator::setImage(Mat img, Size origWinSize) {
 		win_size_->height = origWinSize.height;
 	}
 	params_->cell_count_x_ = win_size_->width / params_->pixel_per_cell_.width;
-	params_->cell_count_y_ = win_size_->height
-			/ params_->pixel_per_cell_.height;
+	params_->cell_count_y_ = win_size_->height/ params_->pixel_per_cell_.height;
 	replaceImage(img);
 	if (params_->image_norm_) {
 		cv::sqrt(current_image_, current_image_);
 	}
 	resetFeatures();
+	if(!genrateHistogramImage())
+		return false;
 	return true;
 }
 
@@ -125,6 +126,7 @@ bool HOGEvaluator::setWindow(Point p) {
 	resetFeatures();
 	win_pos_->x = p.x;
 	win_pos_->y = p.y;
+	genrateFeatures();
 	return true;
 }
 
@@ -220,7 +222,7 @@ bool HOGEvaluator::genrateHistogramImage(){
 	return true;
 }
 
-void HOGEvaluator::generate_features() {
+void HOGEvaluator::genrateFeatures() {
 
 	Mat H_norm = Mat::zeros(histogram_image_.rows, histogram_image_.cols, histogram_image_.type());
 	for (int y = win_pos_->y; y < histogram_image_.rows; y += params_->block_stride_.height) {
@@ -248,20 +250,4 @@ void HOGEvaluator::generate_features() {
 	H_norm.reshape(H_norm.channels(),
 			params_->cell_count_x_ * params_->cell_count_y_
 					* params_->bin_count_).assignTo(features_, CV_32F);
-}
-
-void HOGEvaluator::write_features(string path) {
-	std::ofstream out_file(path.c_str(), ofstream::out | ofstream::app);
-	if (out_file.is_open()) {
-		ostringstream trimer;
-		trimer << features_;
-		string the_mat = trimer.str();
-		the_mat.erase(0, 1);
-		the_mat.erase(the_mat.size() - 1, 1);
-//		cout << "Features : " << the_mat <<"*"<< endl;
-		the_mat.erase(std::remove(the_mat.begin(), the_mat.end(), ' '),
-				the_mat.end());
-		out_file << the_mat << endl;
-	}
-	out_file.close();
 }
