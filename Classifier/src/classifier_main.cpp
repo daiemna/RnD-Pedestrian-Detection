@@ -1,44 +1,68 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-#include "debug.hpp"
-#include "CascadedClassifier.hpp"
+#include "debug.h"
+#include "CascadedClassifier.h"
 
 using namespace std;
 using namespace cv;
-using namespace ml;
+using namespace machineLearning;
 
 int captureStream(int argc, char* argv[]);
 int matrixTest(int argc, char* argv[]);
 int cascadeTest(int argc, char* argv[]);
 int mlp_test(int argc, char* argv[]);
+int mat_test_sclice(int argc, char* argv[]);
 
 int main(int argc, char* argv[]) {
 //	matrixTest(argc,argv);
 	return cascadeTest(argc, argv);
+//	return mat_test_sclice(argc, argv);
 
 }
+
+
 
 int cascadeTest(int argc, char* argv[]){
-	CascadedClassifier cascade_classifier(10);
-	uint samples = 5;
-	uint features = 10;
-	Mat train_data = Mat(samples,features,CV_32FC1);
+	CascadedClassifier cascade_classifier(100);
+	uint samples = 40;
+	uint features = 4096;
+	Mat train_data = Mat::zeros(samples,features,CV_32FC1);
 	RNG rng = RNG();
-	rng.fill(train_data,RNG::NORMAL,rng.uniform(1,5),rng.uniform(1,5));
-	DEBUG_STREAM << "train_data : " << train_data << endl;
+//	Mat part = train_data(Rect(1,0,features-1,samples));
+	rng.fill(train_data,RNG::UNIFORM,0,10);
 	Mat res = Mat::zeros(Size(1,samples),CV_32FC1);
-	res.row(0) = Scalar(1);
-//	res.row(1) = Scalar(1);
-	res.row(2) = Scalar(1);
-//	res.row(3) = Scalar(1);
-	res.row(4) = Scalar(1);
-	cascade_classifier.train(train_data,res);
-	Mat predictions;
-	cascade_classifier.predict(train_data,predictions);
-	DEBUG_STREAM << "predictions : " << predictions << endl;
+	rng.fill(res,RNG::UNIFORM,0,1);
+	res = (res <= 0.5)/255;
+	res.convertTo(res,CV_32F);
+	DEBUG_STREAM << "train_data : " << train_data.rows <<", " << train_data.cols << endl;
+	DEBUG_STREAM << "res : " << res.rows <<", " << res.cols << endl;
+	if(cascade_classifier.train(train_data,res)){
+		DEBUG_STREAM << "Training Complete!" << endl;
+		rng.fill(train_data,RNG::UNIFORM,0,10);
+		res = (res <= 0.5)/255;
+		res.convertTo(res,CV_32F);
+
+		Mat predictions,probs;
+		cascade_classifier.predict(train_data,predictions,probs);
+		DEBUG_STREAM << "predictions : " << predictions << endl;
+		DEBUG_STREAM << "probs : " << probs<< endl;
+	}
 	return 0;
 }
+
+int mat_test_sclice(int argc, char* argv[]){
+	Mat A(1,10,CV_8U),B;
+	uchar data[10] = {1,2,3,4,5,6,7,8,9,10};
+	A.data = data;
+	int ex_ind = 0;
+	hconcat(A.colRange(0,ex_ind),A.colRange(ex_ind+1,A.cols),B);
+	cout << "A is : " << A << endl;
+	cout << "A is : " << B << endl;
+	return 0;
+}
+
+
 
 int mlp_test(int argc, char* argv[]){
 	Mat train_data = Mat(5,10,CV_32FC1);
