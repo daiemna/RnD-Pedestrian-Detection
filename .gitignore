@@ -34,6 +34,7 @@ features/img/
 #eclipse
 .project
 .pydevproject
+.externalToolBuilders/
 Default/
 .settings/
 .cproject
@@ -42,3 +43,4 @@ Default/
 
 #python
 *.pyc
+/cmake_builder/
